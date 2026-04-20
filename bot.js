@@ -23,7 +23,8 @@ function getSession(chatId) {
     return userSessions[chatId];
 }
 
-const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
+//const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
+const bot = new TelegramBot(process.env.BOT_TOKEN);
 
 function initBot(menuText) {
     bot.onText(/\/start/, (msg) => {
@@ -78,11 +79,19 @@ function initBot(menuText) {
         try {
             bot.sendChatAction(chatId, 'typing');
 
-            const completion = await openai.chat.completions.create({
-                model: 'llama-3.3-70b-versatile',
-                messages: messages,
-                temperature: 0.3,
-            });
+            // const completion = await openai.chat.completions.create({
+            //     model: 'llama-3.3-70b-versatile',
+            //     messages: messages,
+            //     temperature: 0.3,
+            // });
+            const completion = await Promise.race([
+                openai.chat.completions.create({
+                    model: 'llama-3.3-70b-versatile',
+                    messages: messages,
+                    temperature: 0.3,
+                }),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('GROQ_TIMEOUT')), 10000)) // Hẹn giờ 10s
+            ]);
 
             let botReply = completion.choices[0].message.content;
             const chotDonMatch = botReply.match(/\[CHOT_DON\|(\d+)\]/);
@@ -146,7 +155,7 @@ function initBot(menuText) {
         }
     });
 
-    bot.on('polling_error', (err) => console.error('[Polling Error]:', err.message));
+
 }
 
 module.exports = { bot, initBot };

@@ -13,6 +13,13 @@ app.use(express.json());
 
 app.get('/', (req, res) => res.send('Bot is running! 🚀'));
 
+// --- WEBHOOK TELEGRAM ---
+app.post('/bot-webhook', (req, res) => {
+    console.log('📬 [WEBHOOK] Vừa nhận được tin nhắn:', req.body.message?.text);
+    bot.processUpdate(req.body); // Ném tin nhắn nhận được cho bot.js xử lý
+    res.sendStatus(200); // Báo cáo Telegram là "Nhận được rồi nhé"
+});
+
 app.post('/payos-webhook', async (req, res) => {
     console.log('\n--- WEBHOOK PAYOS ---');
 
@@ -74,7 +81,12 @@ async function startApp() {
         const { menuText } = await loadMenu();
         initBot(menuText);
 
-        // 3. Chạy Server
+        // 3. CÀI ĐẶT WEBHOOK 
+        const webhookUrl = 'https://milktea-chatbot.onrender.com'; // Link Render của bạn
+        await bot.setWebHook(`${webhookUrl}/bot-webhook`);
+        console.log('Đã thiết lập Telegram Webhook thành công!');
+
+        // 4. Chạy Server
         app.listen(PORT, () => {
             console.log(`Server đang chạy tại http://localhost:${PORT}`);
         });
