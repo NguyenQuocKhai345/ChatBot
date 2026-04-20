@@ -1,11 +1,11 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const mongoose = require('mongoose'); // Thêm Mongoose
+const mongoose = require('mongoose');
 
 const { loadMenu } = require('./menu');
 const { bot, initBot } = require('./bot');
-const Order = require('./models/Order'); // Import Model
+const Order = require('./models/order');
 
 const app = express();
 app.use(cors());
@@ -32,13 +32,13 @@ app.post('/payos-webhook', async (req, res) => {
             if (order) {
                 console.log(`[Webhook] Đã cập nhật trạng thái PAID cho đơn #${orderCode}`);
 
-                // 1. Gửi tin nhắn báo hỉ cho KHÁCH HÀNG
+                // 1. Gửi tin nhắn cho KHÁCH HÀNG
                 bot.sendMessage(order.chatId,
                     `🎉 Ting ting! Mình nhận được ${data.amount?.toLocaleString('vi-VN') || ''}đ rồi!\n` +
                     `Đơn #${orderCode} đang được chuẩn bị, mình giao sớm cho bạn nhé! 🧋`
                 );
 
-                // 2. Gửi tin nhắn nổ đơn cho CHỦ QUÁN
+                // 2. Gửi tin nhắn cho CHỦ QUÁN
                 const ownerChatId = process.env.OWNER_CHAT_ID;
                 if (ownerChatId) {
                     bot.sendMessage(ownerChatId,

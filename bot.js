@@ -1,7 +1,7 @@
 const TelegramBot = require('node-telegram-bot-api');
 const { OpenAI } = require('openai');
 const { PayOS: PayOSClass } = require('@payos/node');
-const Order = require('./models/Order'); // Import Model Database
+const Order = require('./models/order');
 
 const payos = new PayOSClass(
     process.env.PAYOS_CLIENT_ID,
@@ -149,5 +149,4 @@ function initBot(menuText) {
     bot.on('polling_error', (err) => console.error('[Polling Error]:', err.message));
 }
 
-// Không xuất pendingOrders nữa
 module.exports = { bot, initBot };
