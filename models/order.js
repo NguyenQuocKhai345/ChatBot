@@ -4,6 +4,7 @@ const orderSchema = new mongoose.Schema({
     orderCode: { type: Number, required: true, unique: true },
     chatId: { type: Number, required: true },
     amount: { type: Number, required: true },
+    orderDetails: { type: String, required: true },
     status: { type: String, enum: ['PENDING', 'PAID'], default: 'PENDING' },
     createdAt: { type: Date, default: Date.now }
 });

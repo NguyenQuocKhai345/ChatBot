@@ -31,10 +31,26 @@ app.post('/payos-webhook', async (req, res) => {
 
             if (order) {
                 console.log(`[Webhook] Đã cập nhật trạng thái PAID cho đơn #${orderCode}`);
+
+                // 1. Gửi tin nhắn báo hỉ cho KHÁCH HÀNG
                 bot.sendMessage(order.chatId,
                     `🎉 Ting ting! Mình nhận được ${data.amount?.toLocaleString('vi-VN') || ''}đ rồi!\n` +
                     `Đơn #${orderCode} đang được chuẩn bị, mình giao sớm cho bạn nhé! 🧋`
                 );
+
+                // 2. Gửi tin nhắn nổ đơn cho CHỦ QUÁN
+                const ownerChatId = process.env.OWNER_CHAT_ID;
+                if (ownerChatId) {
+                    bot.sendMessage(ownerChatId,
+                        `🔔 ĐƠN HÀNG MỚI - ĐÃ THANH TOÁN\n` +
+                        `━━━━━━━━━━━━━━━━━━━━\n` +
+                        `Mã đơn: #${orderCode}\n` +
+                        `${order.orderDetails}\n` +
+                        `Tổng tiền: ${data.amount?.toLocaleString('vi-VN')}đ\n` +
+                        `━━━━━━━━━━━━━━━━━━━━`
+                    ).catch(err => console.error('Lỗi gửi tin cho chủ quán:', err.message));
+                }
+
             } else {
                 console.warn(`[Webhook] Không tìm thấy đơn #${orderCode} trong Database`);
             }

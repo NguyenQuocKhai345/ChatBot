@@ -58,7 +58,13 @@ function initBot(menuText) {
         1. Chỉ báo giá đúng theo menu. Không bịa giá.
         2. Hỏi size (M/L) nếu khách chưa chọn. Hỏi topping nếu khách muốn thêm.
         3. Trước khi chốt đơn, BẮT BUỘC hỏi đủ 3 thông tin nếu chưa có: Tên khách, Số điện thoại, Địa chỉ giao hàng.
-        4. Khi đã có đủ 3 thông tin trên, hãy xác nhận lại toàn bộ đơn hàng (Tên, SĐT, Địa chỉ, Món ăn, Tổng tiền) với khách.
+        4. Khi đã có đủ 3 thông tin trên, hãy xác nhận lại toàn bộ đơn hàng theo format với khách.
+            Tên: [tên khách]
+            SĐT: [số điện thoại]
+            Địa chỉ: [địa chỉ]
+            Món: [tên món đã chọn, size, topping nếu có]
+            Tổng tiền: [tổng tiền]
+        
         5. QUAN TRỌNG: Quán CHỈ nhận thanh toán chuyển khoản trước qua mã QR. Ngay khi khách xác nhận đồng ý chốt đơn, BẠN BẮT BUỘC THÊM ĐÚNG 1 DÒNG NÀY vào CUỐI CÙNG câu trả lời:
         [CHOT_DON|tổng_tiền_bằng_số]
 
@@ -95,10 +101,19 @@ function initBot(menuText) {
 
                 const orderCode = Date.now() % 9000000 + 1000000;
 
+                // Parse thông tin cụ thể từ botReply
+                const parseName = botReply.match(/[Tt]ên[:\s]+([^\n\-]+)/)?.[1]?.trim() || '(chưa rõ)';
+                const parsePhone = botReply.match(/[Ss][Đđ][Tt][:\s]+([^\n\-]+)/)?.[1]?.trim() || '(chưa rõ)';
+                const parseAddress = botReply.match(/[Đđ]ịa chỉ[:\s]+([^\n\-]+)/)?.[1]?.trim() || '(chưa rõ)';
+                const parseItems = botReply.match(/[Mm]ón[^:\n]*[:\s]+([^\n]+)/)?.[1]?.trim() || '(chưa rõ)';
+
+                const structuredDetails = `Tên: ${parseName}\nSĐT: ${parsePhone}\nĐịa chỉ: ${parseAddress}\nMón: ${parseItems}`;
+
                 const newOrder = new Order({
                     orderCode: orderCode,
                     chatId: chatId,
                     amount: amount,
+                    orderDetails: structuredDetails,
                     status: 'PENDING'
                 });
                 await newOrder.save();
