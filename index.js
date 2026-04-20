@@ -1,61 +1,70 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose'); // Thêm Mongoose
 
-// Import từ các file đã tách
 const { loadMenu } = require('./menu');
-const { bot, initBot, pendingOrders } = require('./bot');
+const { bot, initBot } = require('./bot');
+const Order = require('./models/Order'); // Import Model
 
-// ==========================================
-//  EXPRESS SERVER & WEBHOOK PAYOS
-// ==========================================
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Health check — Railway/Render cần endpoint này để biết app còn sống
-app.get('/', (req, res) => res.send('Bot is running! '));
+app.get('/', (req, res) => res.send('Bot is running! 🚀'));
 
 app.post('/payos-webhook', async (req, res) => {
     console.log('\n--- WEBHOOK PAYOS ---');
-    console.log(JSON.stringify(req.body, null, 2));
 
     const { code, data } = req.body;
 
     if (code === '00' && data) {
         const orderCode = data.orderCode;
-        console.log(`[Webhook] orderCode nhận: ${orderCode} | pendingOrders hiện tại:`, pendingOrders);
-        const chatId = pendingOrders[orderCode];
 
-        if (chatId) {
-            bot.sendMessage(chatId,
-                `🎉 Ting ting! Mình nhận được ${data.amount?.toLocaleString('vi-VN') || ''}đ rồi!\n` +
-                `Đơn #${orderCode} đang được chuẩn bị, mình giao sớm cho bạn nhé! 🧋`
+        try {
+            // Tìm đơn hàng trong MongoDB và cập nhật trạng thái thành PAID
+            const order = await Order.findOneAndUpdate(
+                { orderCode: orderCode },
+                { status: 'PAID' },
+                { new: true } // Trả về document sau khi đã update
             );
-            delete pendingOrders[orderCode];
-        } else {
-            console.warn(`[Webhook] Không tìm thấy chatId cho đơn #${orderCode}`);
+
+            if (order) {
+                console.log(`[Webhook] Đã cập nhật trạng thái PAID cho đơn #${orderCode}`);
+                bot.sendMessage(order.chatId,
+                    `🎉 Ting ting! Mình nhận được ${data.amount?.toLocaleString('vi-VN') || ''}đ rồi!\n` +
+                    `Đơn #${orderCode} đang được chuẩn bị, mình giao sớm cho bạn nhé! 🧋`
+                );
+            } else {
+                console.warn(`[Webhook] Không tìm thấy đơn #${orderCode} trong Database`);
+            }
+        } catch (error) {
+            console.error('[Lỗi DB Webhook]:', error);
         }
     }
 
-    // Luôn trả 200 để payOS không retry
     res.json({ success: true });
 });
 
 const PORT = process.env.PORT || 3000;
 
-// Hàm khởi động đồng bộ để giữ nguyên thứ tự luồng
 async function startApp() {
-    // 1. Đợi load xong CSV
-    const { menuText } = await loadMenu();
+    try {
+        // 1. Kết nối MongoDB
+        await mongoose.connect(process.env.MONGODB_URI);
+        console.log('Đã kết nối thành công với MongoDB!');
 
-    // 2. Nhét menu vào Bot và kích hoạt
-    initBot(menuText);
+        // 2. Load Menu & Bot
+        const { menuText } = await loadMenu();
+        initBot(menuText);
 
-    // 3. Khởi động Webhook
-    app.listen(PORT, () => {
-        console.log(` Server đang chạy tại http://localhost:${PORT}`);
-    });
+        // 3. Chạy Server
+        app.listen(PORT, () => {
+            console.log(`Server đang chạy tại http://localhost:${PORT}`);
+        });
+    } catch (error) {
+        console.error('Lỗi khởi động:', error);
+    }
 }
 
 startApp();
